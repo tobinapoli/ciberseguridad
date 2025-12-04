@@ -1,0 +1,60 @@
+             2025
+
+
+
+
+             WRITEUP
+
+
+
+Challenge
+  Survival
+Description
+
+Title:         Survival
+
+Description:   The worst criminal can be caught simply by trash
+
+Flag:          flagmx{pl4y1ng_w1th_d4t4_r3c0v3r7}
+
+File:          File.7z
+
+Dificultad:    Intermedio
+
+Tags           Forensic
+Solution:
+
+The file.img file is a clone of a USB made with dd. Contains a txt file with the flag removed,
+but no data recovery is required.
+
+
+The challenge is ultimately easy to solve. You must analyze the file "file" to determine if it
+is a disk image.
+
+
+Analysis examples
+
+
+
+
+After determining that it is a disk image file, we can unzip it with 7zip and analyze the
+contents.
+We analyze the contents of the ".Trash-1000" directory and there is a "flag" file.
+
+
+
+
+When opening it with the notes editor we see a base64 string
+
+
+
+
+In Linux you can decode to base64 with the following command
+echo "ZmxhZ214e3BsNHkxbmdfdzF0aF9kNHQ0X3IzYzB2M3I3fQ==" | base64 –decode
+
+
+
+
+The flag is:
+                     flagmx{pl4y1ng_w1th_d4t4_r3c0v3r7}
+

@@ -1,0 +1,48 @@
+                    2025
+
+
+
+
+                    WRITEUP
+
+
+
+Challenge
+Travel Agency CTF
+Description
+
+     The FBI has received multiple reports indicating alleged irregularities
+committed by a travel agency operating online. The accusations were
+submitted by affected citizens.
+      To verify the validity of these reports, the FBI has assigned the case to
+Special Agent Steve Rogers, known for his experience in cybercrime and
+financial fraud investigations. As part of the initial proceedings, he was
+provided with the URL of the Facebook profile linked to the suspected agency:
+https://www.facebook.com/profile.php?id=61581844493138.
+      The investigation is currently in its preliminary phase, and the FBI has
+asked the public to share any relevant information through official channels.
+Solution:
+1. For this challenge, you will need to conduct a digital analysis of the profile, searching for
+   behavioral patterns, customer testimonials, promotional posts, and any clues that may help
+   uncover the flag.
+2. Focus your attention on the "Code Location" — that's where the key lies.
+
+
+
+
+3. Analyze the "Code Location" of the      𝗖𝗢𝗟𝗜𝗠𝗔𝗡 𝗧𝗢𝗨𝗥         post — you'll see it intentionally
+   follows a different pattern.
+         Code Location: 102108097103109120123102114052117100125
+         https://www.google.com/maps?q=102.108097103109120123,102.114052117100125
+4. To find the flag, you must divide the "Code Location" into groups of three—this will help you
+   identify the character corresponding to the ASCII code. Once you do this, you'll uncover the
+   flag.
+
+        String: 102108097103109120123102114052117100125
+
+       Groups 102 108 097 103 109 120 123 102 114 052 117 100 125
+       Ascii f    l   a   g   m   x   {   f   r   4   u   d   }
+
+
+     Flag: flagmx{fr4ud}
+

@@ -1,0 +1,191 @@
+            2025
+
+
+
+
+            WRITEUP
+
+
+
+Challenge
+   Sully
+Description
+
+“Find the hidden message in the image, don't be sad.”
+This challenge is of the LSB Steganography type, which consists of hiding the
+message in the least significant bits of an image's pixels.
+In this case, the flag was hidden only in the blue pixels, in a staggered manner,
+such as pixels 0, 2, 4, 6, etc. This makes it opaque when viewing the image with
+a hexadecimal editor. The image to be deciphered is as follows:
+Clues for this challenge
+
+
+The file name is sully.png. Sully is the name of the main character in the movie
+Monsters Inc. which is blue in color.
+
+
+The image is of three paint cans in red, blue, and green (RGB) colors, suggesting
+that the key is in the pixels.
+
+
+In the corners of the image, the numbers 0, 2, 4, and 6 are grayed out,
+suggesting the alternating pixels.
+
+
+Inside the green paint is the text THEFATRAT PARALLAX TRACK1. This refers to
+the song by the band THEFATRAT from their album PARALLAX. The first song
+(Track 1) is called Hiding In The Blue.
+
+
+The challenge prompt says "don't be sad," referring to the color blue, which is
+associated with sadness.
+Solution:
+This challenge can be solved in different ways, in this case we will solve it with a Python script,
+using the Windows 10 operating system.
+
+
+
+
+We must have Python installed to verify if this is the case, from CMD we type the following:
+
+
+
+python –version
+
+
+
+or
+
+
+
+python3 –version
+
+
+
+If it is not installed we can download it from this link:
+
+https://www.python.org/downloads/
+
+
+
+Once installed we create a folder, the name is indistinct in this case we will call it "extraer"
+
+
+
+In this folder we store the sully.png file.
+
+
+
+Using the Notepad text editor, we paste the following code:
+from PIL import Image
+
+
+
+def extraer_mensaje(imagen_entrada):
+
+   """
+
+   Extrae un mensaje oculto en el canal azul de la imagen,
+
+   usando solo píxeles alternos (uno sí, otro no).
+
+   """
+
+   img = Image.open(imagen_entrada)
+
+   img = img.convert("RGB")
+
+   pixels = img.load()
+
+
+
+   ancho, alto = img.size
+
+   bits = []
+
+
+
+   # Recorremos solo píxeles pares
+
+   for y in range(alto):
+
+         for x in range(ancho):
+
+            idx = y * ancho + x
+
+            if idx % 2 == 0:   # píxeles pares
+
+                r, g, b = pixels[x, y]
+
+                bits.append(b & 1)
+
+
+
+   # Agrupar bits en bytes
+
+   mensaje = ""
+
+   for i in range(0, len(bits), 8):
+
+         byte = bits[i:i+8]
+
+         if len(byte) < 8:
+
+            continue
+
+         caracter = chr(int("".join(map(str, byte)), 2))
+
+         mensaje += caracter
+         if mensaje.endswith("###"):     # delimitador de fin
+
+             return mensaje[:-3]
+
+
+
+    return mensaje
+
+
+
+# ------------------------
+
+# USO DEL SCRIPT
+
+# ------------------------
+
+if __name__ == "__main__":
+
+    entrada = "sully.png"     # imagen con el mensaje oculto
+
+    mensaje = extraer_mensaje(entrada)
+
+    print(f"✅ Mensaje revelado: {mensaje}")
+
+
+
+
+Save the file as a text file with the name "extraer_alterno.py", making sure to select "All files" in
+the "Type" options.
+
+
+
+
+Both files (sully.png and extraer_alterno.py) must be in the same folder; in this case, the "Extraer"
+folder.
+
+
+
+
+From the command prompt, navigate to the directory of your folder and type the following
+command:
+python extraer_alterno.py sully.png
+
+
+
+
+This should give us the following result:
+
+
+
+
+The flag for this challenge is: flagmx{smurfette}
+

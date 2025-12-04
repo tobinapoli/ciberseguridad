@@ -1,0 +1,72 @@
+2025
+
+WRITEUP
+
+Challenge
+DarkInfo
+
+Description
+Title:
+
+DarkInfo
+
+Description:
+
+The hunt consists of checking details in each object found
+
+Flag:
+
+flagmx{AI_sp33ds_7p_d33pf4k3_cr34t10n}
+
+File:
+
+Video.7z
+
+Dificultad:
+
+Avanzado
+
+Tags
+
+Misc
+
+Solution:
+An mp4 file is provided containing base64 metadata, when decoded it is seen that it is a
+rara and when decompressed it is obtained the flag
+
+We look at the content of the comment metadata and extract it with exiftool into a single
+string.
+
+The file archivo_extraido_limpio.b64 contains a base64 string. If we decode it, we see that
+it indicates it's a RAR.
+
+we decode it as rar.
+
+We unzip the archivo_recuperado.rar file and obtain a secret.txt file with the flag.
+
+Looking at the secret.txt file, we see that the first character of each line contains the flag;
+we can see the characters {}. It only remains to observe the details and perform processes
+to reverse the strings.
+
+You can run or create a script in Bash or PowerShell to automatically perform the steps. An
+example would be the following.
+
+$rutaArchivo = "secreto.txt"
+$lineas = Get-Content $rutaArchivo
+$cadenaUnida = ($lineas | ForEach-Object {
+if ($_ -ne "") { $_[0] } else { "" }
+}) -join ""
+$arrayCaracteres = $cadenaUnida.ToCharArray()
+[Array]::Reverse($arrayCaracteres)
+$cadenaInvertida = -join $arrayCaracteres
+Write-Host "Cadena invertida:"
+Write-Host $cadenaInvertida
+Write-Host ""
+
+Running this script allows us to obtain the flag. The first characters of each line are the flag
+characters; they must be scrolled horizontally and then reversed.
+
+The flag is:
+flagmx{AI_sp33ds_7p_d33pf4k3_cr34t10n}
+
+

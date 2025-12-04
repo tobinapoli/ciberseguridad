@@ -1,0 +1,181 @@
+Onion Login – Writeup
+
+El desafío presenta una página con tres formularios de login consecutivos (Level 1, Level 2 y Level 3). Cada uno debe completarse correctamente para obtener la flag. El enunciado señala que no se requiere brute force, por lo que la lógica de resolución debe encontrarse en el código del frontend.
+
+Al revisar el HTML se observa que la página carga un script central:
+
+<script src="/static/app.js"></script>
+
+El contenido de este archivo app.js resulta crucial, ya que contiene toda la lógica de validación de credenciales y el método para obtener la flag final.
+
+═══════════════════════════════════════════════════════════════════════════════
+ANÁLISIS DEL ARCHIVO APP.JS
+═══════════════════════════════════════════════════════════════════════════════
+
+El comportamiento general es el siguiente:
+al primer intento fallido de cada nivel, el servidor devuelve las credenciales correctas, y el JavaScript del cliente las guarda en diferentes mecanismos de almacenamiento, pero sin mostrarlas al usuario. En el segundo intento, el usuario deberá ingresarlas para continuar.
+
+Para cada nivel ocurre lo siguiente:
+
+───────────────────────────────────────────────────────────────────────────────
+LEVEL 1 – USO DE LOCALSTORAGE
+───────────────────────────────────────────────────────────────────────────────
+
+El código relevante es:
+
+    if(attemptCount1 === 0){
+        fetch('/get_credentials/1')
+          .then(r => r.json())
+          .then(d => {
+            localStorage.setItem('username', d.username);
+            localStorage.setItem('password', d.password);
+            showStatus(1,'✗ Wrong credentials','error');
+            attemptCount1++;
+          });
+    }
+
+La primera vez que se envía el formulario, el servidor responde con las credenciales correctas 
+y el script las guarda en localStorage.
+
+Por lo tanto, basta con enviar datos incorrectos una única vez y luego inspeccionar el 
+almacenamiento local desde el navegador.
+
+Pasos de resolución:
+1. Ingresar cualquier usuario/contraseña en Level 1 y enviar el formulario
+2. El servidor responde con las credenciales correctas
+3. Abrir DevTools (F12 o Ctrl+Shift+I)
+4. Ir a la pestaña "Application" o "Storage"
+5. En la sección "Local Storage", seleccionar el dominio del sitio
+6. Se pueden ver los valores almacenados:
+   - username: [valor correcto]
+   - password: [valor correcto]
+7. Copiar esos valores e ingresarlos en el formulario de Level 1
+8. Enviar nuevamente para completar Level 1
+
+───────────────────────────────────────────────────────────────────────────────
+LEVEL 2 – USO DE SESSIONSTORAGE
+───────────────────────────────────────────────────────────────────────────────
+
+El código correspondiente es:
+
+    if(attemptCount2 === 0){
+        fetch('/get_credentials/2')
+          .then(r => r.json())
+          .then(d => {
+            sessionStorage.setItem('username', d.username);
+            sessionStorage.setItem('password', d.password);
+            ...
+          });
+    }
+
+Aquí ocurre lo mismo que en el primer nivel, pero usando sessionStorage en lugar de localStorage.
+
+Pasos de resolución:
+1. Ingresar cualquier usuario/contraseña en Level 2 y enviar el formulario
+2. El servidor responde con las credenciales correctas
+3. Abrir DevTools (F12 o Ctrl+Shift+I)
+4. Ir a la pestaña "Application" o "Storage"
+5. En la sección "Session Storage", seleccionar el dominio del sitio
+6. Se pueden ver los valores almacenados:
+   - username: [valor correcto]
+   - password: [valor correcto]
+7. Copiar esos valores e ingresarlos en el formulario de Level 2
+8. Enviar nuevamente para completar Level 2
+
+DIFERENCIA CON LEVEL 1:
+- sessionStorage es específico de la pestaña del navegador y se borra al cerrar la pestaña
+- localStorage persiste entre sesiones del navegador
+
+───────────────────────────────────────────────────────────────────────────────
+LEVEL 3 – USO DE COOKIES DEL NAVEGADOR
+───────────────────────────────────────────────────────────────────────────────
+
+El tercer nivel utiliza cookies:
+
+    if(attemptCount3 === 0){
+        fetch('/get_credentials/3')
+          .then(r => r.json())
+          .then(d => {
+            setCookie('username', d.username, 1);
+            setCookie('password', d.password, 1);
+          });
+    }
+
+Después del primer intento fallido, las credenciales se guardan automáticamente como cookies.
+
+Pasos de resolución:
+1. Ingresar cualquier usuario/contraseña en Level 3 y enviar el formulario
+2. El servidor responde con las credenciales correctas
+3. Abrir DevTools (F12 o Ctrl+Shift+I)
+4. Ir a la pestaña "Application" o "Storage"
+5. En la sección "Cookies", seleccionar el dominio del sitio
+6. Se pueden ver las cookies:
+   - username: [valor correcto]
+   - password: [valor correcto]
+7. Copiar esos valores e ingresarlos en el formulario de Level 3
+8. Enviar nuevamente para completar Level 3
+
+ALTERNATIVA: Ver las cookies desde la consola del navegador:
+- Abrir DevTools (F12)
+- Ir a la pestaña "Console"
+- Ejecutar: console.log(document.cookie)
+- Esto mostrará todas las cookies de la página en una sola línea
+
+═══════════════════════════════════════════════════════════════════════════════
+OBTENCIÓN DE LA FLAG
+═══════════════════════════════════════════════════════════════════════════════
+
+Una vez superados los tres niveles, el script ejecuta:
+
+    fetch('/get_flag')
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('flag-display').textContent = d.flag;
+        });
+
+El servidor devuelve el valor de la flag en formato JSON y la interfaz la muestra automáticamente 
+en un elemento con id="flag-display".
+
+El flujo completo es:
+1. Completar Level 1 (localStorage)
+2. Completar Level 2 (sessionStorage)
+3. Completar Level 3 (cookies)
+4. El JavaScript realiza una solicitud a /get_flag
+5. El servidor responde con: { "flag": "IC{...}" }
+6. La flag se muestra en la página
+
+═══════════════════════════════════════════════════════════════════════════════
+CONCEPTOS CLAVE
+═══════════════════════════════════════════════════════════════════════════════
+
+El desafío enseña tres mecanismos de almacenamiento en el navegador:
+
+1. localStorage
+   - Persiste entre sesiones
+   - Sincrónico
+   - Disponible para toda la página y sus frames
+   - Se borra solo al borrar caché del navegador
+
+2. sessionStorage
+   - Se borra al cerrar la pestaña
+   - Sincrónico
+   - Disponible solo en la pestaña actual
+   - Útil para datos temporales de la sesión
+
+3. Cookies
+   - Pueden tener una fecha de expiración
+   - Se envían automáticamente con cada solicitud HTTP
+   - Pueden tener atributos de seguridad (HttpOnly, Secure, etc.)
+   - Visibles en las headers HTTP
+
+═══════════════════════════════════════════════════════════════════════════════
+CONCLUSIÓN
+═══════════════════════════════════════════════════════════════════════════════
+
+Este desafío demuestra la importancia de comprender los mecanismos de almacenamiento del 
+navegador. Aunque en este caso el propósito es educativo, en una aplicación real nunca 
+se deberían almacenar credenciales en el navegador sin encriptación.
+
+La lección principal es que todo lo que se ejecuta en el navegador puede ser inspeccionado 
+y modificado por el usuario, por lo que la validación crítica debe realizarse siempre en 
+el servidor.

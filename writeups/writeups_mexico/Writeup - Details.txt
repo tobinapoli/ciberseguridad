@@ -1,0 +1,54 @@
+2025
+
+WRITEUP
+
+Challenge
+Details
+
+Description
+Title:
+
+Details
+
+Description:
+
+Details hidden from the naked eye can provide information
+
+Flag:
+
+flagmx{AI_g3n3r4t3d_c4t}
+
+File:
+
+bin.bin
+
+Dificultad:
+
+Intermedio
+
+Tags
+
+Crypto
+
+Solution:
+A binary file that must be converted to PDF and obtain the flag of the text that is contained
+in the PDF itself.
+The contents of the bin.bin file are displayed with the cat command. We notice that it
+indicates it's a PDF.
+
+It's already been detected as a PDF. We convert the binary to PDF with the following
+command:
+
+xxd -r -b bin.bin > restaurado.pdf
+
+We open the PDF and see its contents. The only text that appears is:
+666c61676d787b41495f67336e3372347433645f6334747d
+
+Analysis of the string indicates that it is hexadecimal. We convert it to text as follows:
+echo "666c61676d787b41495f67336e3372347433645f6334747d" | xxd -r -p
+We get the flag
+
+The flag is:
+flagmx{AI_g3n3r4t3d_c4t}
+
+

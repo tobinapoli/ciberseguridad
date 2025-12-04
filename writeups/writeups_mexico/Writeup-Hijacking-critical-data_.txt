@@ -1,0 +1,132 @@
+                           2025
+
+
+
+
+                           WRITEUP
+
+
+
+Challenge
+Hijacking critical data!
+Description
+
+       Abul Khair Group has dismissed an employee from the advertising team
+due to suspicions of information leakage. To verify whether this assumption is
+valid,    you      have     been     asked      to    analyze      the    file
+advertising_team_employee.pcapng, which contains a traffic capture from a
+workday of the dismissed employee.
+Solution:
+1.- Open the advertising_team_employee.pcapng file using wireshark.
+
+2.- Check the packets that have been downloaded.
+
+
+
+
+3.- Decompile the EXE file using dotPeek and analyze its contents. You will see that the program
+sends a selected file through port 9000. Take into account the functions used for encryption
+(EncryptAES) and data preparation (PrepareData), and implement the corresponding functions to
+decrypt the file that was sent.
+4.- Filter using "ip.addr == 10.0.2.4 && (tcp.srcport == 9000 || tcp.dstport == 9000) && tcp.len >
+0" and export the data using the Export Packet Bytes tool.
+
+
+
+
+       Save the file with a name such as "datasend".
+
+5.- Consider the following code for the program that will process the contents of the "datasend"
+file to retrieve the original file containing the flag:
+Imports   System.Text
+Imports   System.IO
+Imports   System.Security.Cryptography
+Imports   System.Net.Sockets
+
+Public Class Form1
+
+    Dim aesKey As Byte() = Encoding.UTF8.GetBytes("1234567890123456") ' Igual
+que el cliente
+    Dim aesIV As Byte() = Encoding.UTF8.GetBytes("6543210987654321") ' Igual
+que el cliente
+
+
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles
+MyBase.Load
+
+    End Sub
+
+
+    Private Function FiltrarDatos(data As String) As String
+        Dim result As New StringBuilder()
+        Dim i As Integer = 0
+        While i < data.Length
+            ' 5 buenos
+            Dim goodLen As Integer = Math.Min(5, data.Length - i)
+            result.Append(data.Substring(i, goodLen))
+            i += goodLen
+            ' 4 basura
+            i += Math.Min(4, data.Length - i)
+        End While
+        Return result.ToString()
+    End Function
+
+    Private Function DecryptAES(data As Byte()) As Byte()
+        Using aes As Aes = Aes.Create()
+            aes.Key = aesKey
+            aes.IV = aesIV
+            Using ms As New MemoryStream()
+                 Using cs As New CryptoStream(ms, aes.CreateDecryptor(),
+CryptoStreamMode.Write)
+                     cs.Write(data, 0, data.Length)
+                     cs.FlushFinalBlock()
+                     Return ms.ToArray()
+                 End Using
+            End Using
+        End Using
+    End Function
+
+    Private Sub btnConvert_Click(sender As Object, e As EventArgs) Handles
+btnConvert.Click
+        Dim filePath As String = txtArchivo.Text
+        Dim port As Integer = 9000 ' Puedes cambiarlo
+
+        If File.Exists(filePath) Then
+
+            Dim receivedData As String = File.ReadAllText(filePath)
+
+
+            Dim cleanData As String = FiltrarDatos(receivedData)
+            Dim encryptedBytes As Byte() = Convert.FromBase64String(cleanData)
+            Dim decryptedBytes As Byte() = DecryptAES(encryptedBytes)
+
+            File.WriteAllBytes("archivo_recibido.txt", decryptedBytes)
+
+
+            MessageBox.Show("Archivo guardado con éxito.")
+        Else
+            MessageBox.Show("Archivo no encontrado.")
+        End If
+    End Sub
+
+    Private Sub btnBuscar_Click(sender As Object, e As EventArgs) Handles
+btnBuscar.Click
+        If ofd.ShowDialog() = DialogResult.OK Then
+            txtArchivo.Text = ofd.FileName
+        End If
+    End Sub
+End Class
+6.- Run the program to retrieve the contents of the sent file and analyze it.
+
+        &,!'-8;34st,).').&p2-!4q/.=
+
+8.- Use a program or go to a page to find the code: (for example: https://www.dcode.fr/ascii-shift-
+cipher)
+
+
+
+
+6.- Locate the result that contains flagmx, the flag is:
+
+        flagmx{st34linginf0rmat1on}
+

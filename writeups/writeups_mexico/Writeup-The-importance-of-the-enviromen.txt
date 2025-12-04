@@ -1,0 +1,289 @@
+Titulo
+La importancia del entorno
+
+Descripción
+En una empresa se hace uso de un programa principal para ingresar a una base de datos,
+pero para proteger la privacidad de las credenciales se ha optado por hacer uso de un script
+adicional para cargar un nuevo entorno bash con variables de entorno. Pero la única persona
+que sabía la llave era el becario y solamente ha dejado un pequeño programa para obtener la
+llave de nuevo.
+
+¿Podrás recuperar la llave y descubrir que hay dentro del programa principal?
+
+Titulo
+The importance of the enviroment
+
+Description
+A company uses a main program to access a database, but to protect the privacy of the
+credentials, they decided to use an additional script to load a new Bash enviroment with
+enviroment variables. However, the only person who knew the key was the intern, and he only
+left a small program to retrive the key again.
+
+Can you recover the key and discover what's inside the main program?
+
+
+Write Up
+Requisitos para resolver el reto
+   Un sistema operativo Linux, con Bash
+   ccrypt
+   radare2
+   pyinstxtractor
+
+
+Pasos para resolver el reto
+Contenido del reto
+  DO_NOT_DETELE.env.cpt, archivo cifrado con variables de entorno.
+  getkey, ejecutable para recuperar la llave de cifrado de DO_NOT_DELETE.env.cpt
+  main_program, ejecutable con la flag, solo mostrará la flag si existen las variables de
+  entorno correctas
+  start.sh, script que permite generar un entorno nuevo de Bash con las variables de
+  DO_NO_DELETE.env.cpt
+
+Paso 1. Obtener la llave de "getkey"
+  Al ejecutar el comando "strings" en getkey podemos obtener las siguientes cadenas que
+  indican que fue programado con Python 3.11:
+
+
+ blib-dynload/_bz2.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_codecs_cn.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_codecs_hk.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_codecs_iso2022.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_codecs_jp.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_codecs_kr.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_codecs_tw.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_contextvars.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_decimal.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_hashlib.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_lzma.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_multibytecodec.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/_typing.cpython-311-x86_64-linux-gnu.so
+ blib-dynload/resource.cpython-311-x86_64-linux-gnu.so
+
+
+
+
+  Con ello se puede hacer uso de pyinstxtractor para recuperar el los contenidos de un
+  archivo ejecutable generado por Pyinstaller, con ello poder recuperar el archivo .pyc
+  Posteriormente se hará uso de una herramienta para recuperar el código fuente del archivo
+  .pyc a .py, por ejemplo PyLingual
+  Con el código fuente que se encuentra en el anexo del documento se podrá obtener la
+  contraseña llevando a cabo las funciones del programa.
+  La clave que está en base64 es: bs3ci2NGUDlcBfIsFlCV y la llave final es la que te
+  muestra el programa "bs3ci2NGUDlcBfIsFlCV_4m_1_c0rr3ct?"
+
+
+
+
+  Ingresando la clave completa el programa principal podrá funcionar con normalidad:
+
+
+
+
+Paso 2. Depurar (hacer Debugging) de "main_program" con las
+variables de entorno cargadas
+  Para este paso se hará uso de la herramienta radare2 la cual también es un programa para
+  hacer debugging, pero "main_program" no funcionará si no tiene las variables de entorno
+  cargadas, por ello es necesario ejecutar radare2 en modo de depuración con las variables
+  de entorno.
+  La forma de logra esto es modificando el script.sh para que en vez de solo ejecutar el
+  ./main_program ejecute radare2 en modo de depuración:
+
+
+
+
+  Al ejecutar de nuevo el script iniciará radare2 en modo de depuración:
+
+
+
+  A continuación se ejecutará el comando "aaa" para realizar un análisis del código
+  decompilado.
+Con el comando "afl" se podrán visualizar las funciones del programa.
+
+
+
+
+Con el comando "s <función a seleccionar>" permitirá moverte a través del código a la
+función deseada, en este caso si se desea moverse a la función main se ejecutará s main:
+
+
+
+
+La flag se encuentra en la funcion compstr, entonces se ejecutará **s sym.comp_str_int,
+posteriormente se cambiará la vista a modo de debugging, con el comando V y luego
+presionar p** dos veces, hasta ver la siguiente pantalla:
+
+
+
+
+Con F2 podremos establecer un breakpoint en la línea de código actual, el cuál se verá de
+la siguiente forma:
+
+
+
+
+Con F9 se podrá saltar hasta el siguiente breakpoint, en este caso al breakpoint
+anteriormente establecido.
+Una vez ubicados en el breakpoint se usará F7 para ir avanzando instrucción por
+instrucción, mientras que con F8 se utiliza también para ir avanzando instrucción por
+instrucción pero sin entrar a las funciones call.
+Con ello se irá avanzando hasta encontrar el for donde se realiza una operación XOR:
+
+
+
+
+Con ello se avanzará en el for y en la parte superior empezará a mostrar el contenido de la
+cadena que se va generando al descifrarla con XOR:
+Como se puede apreciar, la flag está apareciendo en la parte superior pero ya no alcanza
+el espacio, en ese caso presionando C podremos mover la parte de arriba haciendo uso de
+la flechas direccionales, presionando C de nuevo hará que nos salgamos de este modo.
+
+
+
+
+Obteniendo como flag la siguiente:
+"flagmx{using_environment_variables_can_secure_confidential_data}"
+Anexos
+Código fuente de getkey
+
+ p = print
+
+
+ import subprocess
+ import base64
+ import sys
+
+
+ def d(s):
+     pd = base64.b64decode(s).decode('utf-8')
+     return pd
+
+
+ def dc(s):
+     n = 0
+     a = ""
+     for c in s:
+         if n == 0:
+              n += 1
+              a += c
+        else:
+            n += 1
+              if n == 5:
+                  n = 0
+     return a
+
+
+ def es():
+     subprocess.run(['bash', './start.sh'])
+ def gp(s):
+     p =
+ b'VmFiY2RDZWZnaGxpamtsRm1vcHFzcnN0dUl2eHl6ZjEyMzRCNTY3OGM5MEFCbENERUZER0hJSlVLTE1OR
+ 09QUVJOU1RVVjJYWVphaWJjZGVjZmdoaTNqa2xtc25vcHFi'
+     if s == dc(rs(d(p))):
+         return True
+     else:
+         return False
+
+
+ def main():
+     if va():
+         p("Password obtained...")
+        c = sys.argv[1]
+        if gp(c) == True:
+             p("Congrats!, now you will be able to open the gate to the main
+ program. \nTake this: " + c + "_4m_1_c0rr3ct?")
+            es()
+        else:
+               p("That's not the password :( ")
+
+
+ def rs(s):
+     rs = s[::-1]
+     return rs
+
+
+ def va():
+     if len(sys.argv) != 2:
+        p("Usage: getkey password")
+        return False
+     else:
+         return True
+
+
+ if __name__ == '__main__':
+     main()
+
+
+
+
+Código fuente de main_program
+
+ #include <cstdlib>
+ #include <iostream>
+ #include <cstring>
+
+
+ using namespace std;
+ void comp_str(int key){
+         unsigned char data[64] = {0xbd, 0xb7, 0xba, 0xbc, 0xb6, 0xa3 ,0xa0, 0xae,
+ 0xa8, 0xb2, 0xb5, 0xbc, 0x84, 0xbe, 0xb5, 0xad, 0xb2, 0xa9, 0xb4, 0xb5, 0xb6, 0xbe,
+ 0xb5, 0xaf, 0x84, 0xad, 0xba, 0xa9, 0xb2, 0xba, 0xb9, 0xb7, 0xbe, 0xa8, 0x84, 0xb8,
+ 0xba, 0xb5, 0x84, 0xa8, 0xbe, 0xb8, 0xae, 0xa9, 0xbe, 0x84, 0xb8, 0xb4, 0xb5, 0xbd,
+ 0xb2, 0xbf, 0xbe, 0xb5, 0xaf, 0xb2, 0xba, 0xb7, 0x84, 0xbf, 0xba, 0xaf, 0xba,
+ 0xa6};
+          char flag[65];
+          unsigned char x_key;
+          x_key = (unsigned char)key;
+          for (int i=0; i<64; i++){
+                  flag[i] = data[i] ^ x_key;
+          }
+          flag[65] = 0x00;
+          cout << "Something may happen in the background...\n";
+ }
+
+
+ int main(){
+          char* database = getenv("O0OO00OO");
+          char* user_db = getenv("OO00OO00");
+          char* pass_db = getenv("O000OOOO");
+          char* host_db = getenv("OOOO0000");
+          char* port_db = getenv("OO0000OO");
+          char* key = getenv("OO0OO0OO");
+          char* hex_key = getenv("O0O00O00");
+          int int_key;
+          if(key != NULL){
+                  sscanf(key, "%d", &int_key);
+                 cout << "Connecting to " << database << " using " << user_db << "
+ in " << host_db <<"...\n";
+                  cout << "SELECT key FROM " << database << ".keys;\n";
+                  cout << hex_key << "\n";
+                  comp_str(int_key);
+          }
+          else{
+                  cout << "Enviroment variable not found, please use getkey
+ first!\n";
+         }
+
+
+          return 0;
+ }
+
+
+
+
+Código fuente de start.sh
+
+ #!/usr/bin/env/ bash
+
+
+ activated=''
+while read line; do
+       activated='1'
+       export "$line"
+done < <(ccdecrypt -c ./DO_NOT_DELETE.env.cpt --prompt "Insert the right key: ")
+
+
+test "$activated" || { echo "Something went wrong..."; exit 1;}
+
+
+./main_program
+
