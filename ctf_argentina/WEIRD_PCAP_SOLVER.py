@@ -79,7 +79,7 @@ def main():
         
         # Validar formato
         if flag.startswith('UNLP{'):
-            print("\n[✓] ¡Flag válida! (formato UNLP{...})")
+            print("Flag encontrada!")
         
     except FileNotFoundError:
         print(f"[-] Archivo no encontrado: {pcap_file}")

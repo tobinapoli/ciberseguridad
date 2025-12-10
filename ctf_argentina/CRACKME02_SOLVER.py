@@ -1,30 +1,85 @@
 #!/usr/bin/env python3
-"""
-CRACKME-02 - SHA-256 Password Hash Cracking
-100pts
-
-Objetivo: Extraer el hash SHA-256 almacenado en el binario,
-crackearlo con diccionario, y usar la contraseña como flag.
-
-El binario compara SHA-256(password_ingresado) con k1|k2|k3|k4 (hash objetivo).
-"""
+# CRACKME-02 - SHA-256 Password Hash Cracking
+# Objetivo: Extraer hash del binario y crackearlo
 
 from pwn import *
-import subprocess
 import hashlib
 import os
-from pathlib import Path
+import re
 
-context.arch = "i386"
-
-def extract_hash_from_binary():
-    """Extraer el hash SHA-256 del binario crackme02"""
+def extract_hash_from_binary_dynamic():
+    """Extrae SHA-256 buscando el hash específico en el binario"""
     
     print("[*] Extrayendo hash SHA-256 del binario crackme02...\n")
     
     try:
-        # Cargar el binario
-        elf = ELF("crackme02")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        binary_path = os.path.join(script_dir, "crackme02")
+        
+        with open(binary_path, 'rb') as f:
+            data = f.read()
+        
+        print(f"[+] Binario leído: {len(data)} bytes\n")
+        
+        # Buscar secuencias de 20 bytes (40 caracteres hex - primera mitad del SHA-256)
+        # o 32 bytes (64 caracteres hex - SHA-256 completo)
+        
+        # Primero intentar encontrar SHA-256 completo (32 bytes)
+        for i in range(len(data) - 32):
+            chunk = data[i:i+32]
+            hex_chunk = chunk.hex()
+            
+            # Verificar si comienza con el patrón conocido
+            if hex_chunk.startswith('fcf730b6d95236ecd3c9fc2d92d7b6b2'):
+                print(f"[+] ¡HASH ENCONTRADO en offset 0x{i:x}!")
+                print(f"[+] SHA-256: {hex_chunk}")
+                return hex_chunk
+        
+        # Si no encuentra el completo, buscar la primera mitad (20 bytes)
+        for i in range(len(data) - 20):
+            chunk = data[i:i+20]
+            hex_chunk = chunk.hex()
+            
+            if hex_chunk == 'fcf730b6d95236ecd3c9fc2d92d7b6b2':
+                print(f"[+] ¡PRIMERA MITAD DEL HASH encontrada en offset 0x{i:x}!")
+                # Intentar leer los siguientes 12 bytes
+                if i + 32 <= len(data):
+                    full_chunk = data[i:i+32]
+                    full_hex = full_chunk.hex()
+                    print(f"[+] SHA-256 completo: {full_hex}")
+                    return full_hex
+                else:
+                    print(f"[+] Primera mitad: {hex_chunk}")
+                    return hex_chunk
+        
+        print("[-] Hash específico no encontrado")
+        print("[*] Buscando cualquier SHA-256 en el binario...")
+        
+        # Fallback: buscar cualquier hash de buena entropía
+        for i in range(len(data) - 32):
+            chunk = data[i:i+32]
+            if len(set(chunk)) > 24:
+                hex_chunk = chunk.hex()
+                context = data[max(0, i-200):min(len(data), i+200)]
+                if any(kw in context for kw in [b'admin', b'password', b'secret']):
+                    print(f"[+] Hash alternativo encontrado: {hex_chunk}")
+                    return hex_chunk
+        
+        return None
+    
+    except Exception as e:
+        print(f"[-] Error: {e}")
+        return None
+
+def extract_hash_from_binary():
+    """Extraer el hash SHA-256 del binario crackme02"""
+    
+    print("[*] Intentando extracción por símbolos...\n")
+    
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        binary_path = os.path.join(script_dir, "crackme02")
+        elf = ELF(binary_path)
         print(f"[+] Binario cargado: {elf.path}")
         print(f"    Arch: {elf.arch}")
         print(f"    PIE: {elf.pie}\n")
@@ -47,7 +102,7 @@ def extract_hash_from_binary():
             pass
     
     if not k_symbols:
-        print("[-] No se encontraron símbolos k1-k4")
+        print("[-] No se encontraron símbolos k1-k4, intentando búsqueda dinámica...")
         print("[*] Intentando buscar en .rodata u otras secciones...")
         
         # Alternativa: buscar en .rodata
@@ -248,37 +303,28 @@ def main():
     print("[*] CRACKME-02 - SHA-256 Password Cracker\n")
     print("="*70)
     
-    # Paso 1: Extraer hash del binario
-    hash_target = extract_hash_from_binary()
+    # Paso 1: Extraer hash del binario - intentar primero búsqueda dinámica
+    hash_target = extract_hash_from_binary_dynamic()
     
     if not hash_target:
-        print("\n[-] No se pudo extraer el hash con método 1")
-        hash_target = extract_hash_with_objdump()
+        print("\n[-] Búsqueda dinámica falló, intentando con símbolos...")
+        hash_target = extract_hash_from_binary()
     
     if not hash_target:
-        print("\n[!] No se pudo extraer el hash. Intentando con hashes comunes...")
-        
-        common_hashes = try_hardcoded_hashes()
-        
-        # Intentar conectar al binario y probar hashes
-        print("\n[*] Probando hashes conocidos contra el binario...")
-        
-        for password, hash_val in common_hashes.items():
-            print(f"    Probando: {password} ({hash_val[:16]}...)")
-            # Aquí podrías intentar ejecutar el binario localmente si es posible
-        
-        # Si estamos en Windows puro, necesitamos el hash extraído
-        print("\n[!] En Windows puro, necesitas el hash SHA-256 extraído del binario.")
-        print("[*] Opciones:")
-        print("    1. Copia crackme02 a Linux/WSL y ejecuta: nm -n crackme02 | grep k[1-4]")
-        print("    2. Luego: objdump -s --start-address=0xADDRESS crackme02")
+        print("\n[-] No se pudo extraer el hash automáticamente")
+        print("[*] Opciones manuales:")
+        print("    1. WSL: nm -n crackme02 | grep k[1-4]")
+        print("    2. WSL: objdump -s --start-address=0xADDRESS crackme02")
         print("    3. Copia el hash aquí")
         return
     
-    print(f"\n[+] Hash objetivo: {hash_target}\n")
+    print(f"\n[+] Hash objetivo encontrado:")
+    print(f"    {hash_target}")
+    print("\n" + "="*70)
     
     # Paso 2: Crackear el hash
-    print("="*70)
+    print("\n[*] Intentando crackear el hash...")
+    print()
     
     # Intentar primero con hashes comunes
     common_hashes = try_hardcoded_hashes()
