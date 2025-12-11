@@ -1,15 +1,19 @@
 import sys
 import math
+import os
 from qiskit import QuantumCircuit, transpile
 from qiskit_aer import Aer
 from qiskit.qpy import load
 from qiskit.circuit.library import MCXGate
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+oracle_path = os.path.join(script_dir, 'oracle.qpy')
+
 try:
-  with open('oracle.qpy', 'rb') as f:
+  with open(oracle_path, 'rb') as f:
     circ = load(f)[0]
 except FileNotFoundError:
-  print("Error: 'oracle.qpy' not found.")
+  print(f"Error: 'oracle.qpy' not found at {oracle_path}")
   sys.exit(1)
 
 n = circ.num_qubits
